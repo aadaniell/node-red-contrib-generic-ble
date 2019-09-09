@@ -1,15 +1,15 @@
 {
-  "name": "node-red-contrib-generic-ble",
-  "version": "3.1.0",
+  "name": "node-red-contrib-generic-ble-arcom",
+  "version": "3.1.1",
   "description": "Node-RED nodes for generic BLE devices",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/CANDY-LINE/node-red-contrib-generic-ble.git"
+    "url": "https://github.com/aadaniell/node-red-contrib-generic-ble.git"
   },
-  "author": "Daisuke Baba <baba.daisuke@gmail.com>",
+  "author": "Antoine DANIEL <antoine.daniel@groupe-arcom.com>",
   "bugs": {
-    "url": "https://github.com/CANDY-LINE/node-red-contrib-generic-ble/issues"
+    "url": "https://github.com/aadaniell/node-red-contrib-generic-ble/issues"
   },
   "scripts": {
     "build": "gulp build",
@@ -17,15 +17,13 @@
     "clean": "gulp clean",
     "prepublish": "gulp build"
   },
-  "homepage": "https://github.com/CANDY-LINE/node-red-contrib-generic-ble#readme",
+  "homepage": "https://github.com/aadaniell/node-red-contrib-generic-ble#readme",
   "keywords": [
     "node-red",
     "bluetooth",
     "BLE",
     "bluetooth low energy",
     "bluetooth smart",
-    "CANDY RED",
-    "CANDY EGG"
   ],
   "devDependencies": {
     "babel": "^6.23.0",
