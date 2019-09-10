@@ -259,7 +259,6 @@ export default function(RED) {
 
   class GenericBLENode {
     constructor(n) {
-        console.log(n);
         let t = this;
       RED.nodes.createNode(this, n);
       this.localName = n.localName;
@@ -275,24 +274,17 @@ export default function(RED) {
       this.nodes = {};
       this.operations = {
 		  modifyProperties : function (name,address,uuid) {
-				if(name) {
-                  t.localName = name;
-                }
-				if(address){
-                  t.address = address;
-				}
-				if(uuid){
-				  t.uuid = uuid;
-                }
-				if(address){
-				t.characteristics = [];
-				}
-                t.operations.preparePeripheral();
+				name ? t.localName = name : (t.localName = n.localName),
+				address ? t.address = address : (t.address = n.address),
+				uuid ? t.uuid = uuid : (t.uuid = n.uuid),
+				address ? t.characteristics = [] : (t.characteristics = n.characteristics),
+                t.operations.preparePeripheral(); //jshint ignore:line
 			},
         preparePeripheral: () => {
           let peripheral = noble._peripherals[this.uuid];
           if (!peripheral) {
             this.emit('disconnected');
+            t.operations.shutdown();
             return Promise.resolve();
           }
           let connecting = (peripheral.state === 'connecting');
@@ -303,6 +295,7 @@ export default function(RED) {
                 peripheral._disconnectedHandlerSet = true;
                 peripheral.once('disconnect', () => {
                   this.emit('disconnected');
+                  t.operations.shutdown();
                   peripheral._disconnectedHandlerSet = false;
                 });
               }
@@ -337,6 +330,7 @@ export default function(RED) {
                 peripheral._disconnectedHandlerSet = true;
                 peripheral.once('disconnect', () => {
                   this.emit('disconnected');
+                  t.operations.shutdown();
                   peripheral._disconnectedHandlerSet = false;
                 });
               }
@@ -357,7 +351,8 @@ export default function(RED) {
                 } else if (retry < 10) {
                   setTimeout(connectedHandler, 500);
                 } else {
-                  this.emit('timeout');
+                  this.emit('disconnected');
+                  t.operations.shutdown();
                   return resolve(peripheral.state);
                 }
               };
@@ -530,13 +525,13 @@ export default function(RED) {
             return Promise.all(notifiables.map((r) => {
               r.addDataListener((data, isNotification) => {
                 if (isNotification) {
-                  var s = noble.default._peripherals[r.uuid];
-					s.updateRssi();
+                  let peripheral = noble._peripherals[r.uuid];
+					peripheral.updateRssi();
 				  let readObj = {
                     notification: true
                   };
                   readObj[r.uuid] = data;
-                  this.emit('ble-notify', this.uuid, readObj, s.rssi);
+                  this.emit('ble-notify', this.uuid, readObj, peripheral.rssi);
                 }
               });
               r.object.subscribe((err) => {
@@ -639,42 +634,42 @@ export default function(RED) {
           let p;
 		  if(obj.name === 'disconnect')
           {
-              let temp = noble.default._peripherals[obj.uuid];
-              temp.disconnect();
+              let peripheral = noble._peripherals[obj.uuid];
+              peripheral.disconnect();
           }
           else if (obj.name === 'connect')
           {
               this.genericBleNode.operations.modifyProperties(obj.name,obj.address,obj.uuid);
           }
           else{
-          if (obj.notify) {
-            p = this.genericBleNode.operations.subscribe(msg.topic, obj.period);
-          } else {
-            p = this.genericBleNode.operations.read(msg.topic).then((readObj) => {
-              if (!readObj) {
-                this.warn(`<${this.genericBleNode.uuid}> Nothing to read`);
-				this.genericBleNode.operations.remove(this);
-                return;
+              if (obj.notify) {
+                p = this.genericBleNode.operations.subscribe(msg.topic, obj.period);
+              } else {
+                p = this.genericBleNode.operations.read(msg.topic).then((readObj) => {
+                  if (!readObj) {
+                    this.warn(`<${this.genericBleNode.uuid}> Nothing to read`);
+                    this.genericBleNode.operations.remove(this);
+                    return;
+                  }
+                  let peripheral = noble._peripherals[this.genericBleNode.uuid];
+                  peripheral.updateRssi();
+                  let payload = {
+                    uuid: this.genericBleNode.uuid,
+                    rssi : peripheral.rssi,
+                    characteristics: readObj
+                  };
+                  if (this.useString) {
+                    payload = JSON.stringify(payload);
+                  }
+                  this.send({
+                    payload: payload
+                  });
+                });
               }
-			  var s = noble.default._peripherals[this.genericBleNode.uuid];
-              s.updateRssi();
-              let payload = {
-                uuid: this.genericBleNode.uuid,
-				rssi : s.rssi,
-                characteristics: readObj
-              };
-              if (this.useString) {
-                payload = JSON.stringify(payload);
-              }
-              this.send({
-                payload: payload
-              });
-            });
-          }
-          p.catch((err) => {
-            this.error(`<${this.uuid}> read: (err:${err})`);
-					});
-					}
+              p.catch((err) => {
+                this.error(`<${this.uuid}> read: (err:${err})`);
+                        });
+            }
         });
 		
         this.on('close', () => {
@@ -695,12 +690,11 @@ export default function(RED) {
       this.genericBleNode = RED.nodes.getNode(this.genericBleNodeId);
       if (this.genericBleNode) {
         this.on('connected', () => {
-			
-          //this.status({fill:'green',shape:'dot',text:`generic-ble.status.connected`});
+            this.status({fill:'green',shape:'dot',text:`generic-ble.status.connected`});
         });
         ['disconnected', 'error', 'timeout'].forEach(ev => {
           this.on(ev, () => {
-          //  this.status({fill:'red',shape:'ring',text:`generic-ble.status.${ev}`});
+            this.status({fill:'red',shape:'ring',text:`generic-ble.status.${ev}`});
           });
         });
         this.genericBleNode.operations.register(this);
