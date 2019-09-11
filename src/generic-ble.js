@@ -525,7 +525,7 @@ export default function(RED) {
             return Promise.all(notifiables.map((r) => {
               r.addDataListener((data, isNotification) => {
                 if (isNotification) {
-                  let peripheral = noble._peripherals[r.uuid];
+                  let peripheral = noble._peripherals[this.uuid];
 					peripheral.updateRssi();
 				  let readObj = {
                     notification: true
