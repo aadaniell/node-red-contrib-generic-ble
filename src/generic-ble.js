@@ -273,11 +273,9 @@ export default function(RED) {
       }
       this.nodes = {};
       this.operations = {
-		  modifyProperties : function (name,address,uuid) {
-				name ? t.localName = name : (t.localName = n.localName),
-				address ? t.address = address : (t.address = n.address),
-				uuid ? t.uuid = uuid : (t.uuid = n.uuid),
-				address ? t.characteristics = [] : (t.characteristics = n.characteristics),
+		  modifyProperties : function (uuid) {
+				t.uuid = uuid,
+				t.characteristics = [],
                 t.operations.preparePeripheral(); //jshint ignore:line
 			},
         preparePeripheral: () => {
@@ -568,10 +566,8 @@ export default function(RED) {
         });
       });
       this.emit('disconnected');
-      this.on('close', (done) => {
-        Object.keys(configBleDevices).forEach(k => delete configBleDevices[k]);
-        this.operations.shutdown().then(done).catch(done);
-      });
+      Object.keys(configBleDevices).forEach(k => delete configBleDevices[k]);
+        this.operations.shutdown();
     }
   }
   RED.nodes.registerType('Generic BLE', GenericBLENode);
@@ -636,10 +632,11 @@ export default function(RED) {
           {
               let peripheral = noble._peripherals[obj.uuid];
               peripheral.disconnect();
+              this.genericBleNode.operations.shutdown();
           }
           else if (obj.name === 'connect')
           {
-              this.genericBleNode.operations.modifyProperties(obj.name,obj.address,obj.uuid);
+              this.genericBleNode.operations.modifyProperties(obj.uuid);
           }
           else{
               if (obj.notify) {
